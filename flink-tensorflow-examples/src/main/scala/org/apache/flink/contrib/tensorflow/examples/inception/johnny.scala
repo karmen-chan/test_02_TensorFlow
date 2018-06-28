@@ -50,17 +50,16 @@ object Johnny {
 
     // 3. detect a certain time-based pattern representing a 'secret access code'
     val detectionPattern = Pattern
-      .begin[LabeledImage]("first").where(img => labeled(img, "cheeseburger", 0f))
-      //.followedBy("second").where(img => labeled(img, "ladybug", 0f))
-      //.followedBy("third").where(img => labeled(img, "llama", 0f))
-      .within(Time.seconds(180))
+      .begin[LabeledImage]("first").where(img => labeled(img, "cheeseburger", .50f))
+      .followedBy("second").where(img => labeled(img, "ladybug", .50f))
+      .followedBy("third").where(img => labeled(img, "llama", .50f))
+      .within(Time.seconds(60))
 
     val detectionStream = CEP
       .pattern(labelStream, detectionPattern)
       .select(
         (pattern, timestamp) => AccessDenied(pattern))(
-        //(pattern) => AccessGranted(pattern("first"), pattern("second"), pattern("third")))
-        (pattern) => AccessGranted(pattern("first")))
+        (pattern) => AccessGranted(pattern("first"), pattern("second"), pattern("third")))
 
     // print the detection events
     detectionStream.print()
@@ -69,13 +68,13 @@ object Johnny {
     env.execute("Johnny")
   }
 
-  def labeled(image: LabeledImage, label: String, confidence: Float = 0f): Boolean = {
+  def labeled(image: LabeledImage, label: String, confidence: Float = .90f): Boolean = {
     image.labels.exists(l => l._2.equalsIgnoreCase(label) && l._1 >= confidence)
   }
 
   case class AccessDenied(pattern: mutable.Map[String, LabeledImage])
-  case class AccessGranted(first: LabeledImage) {
-    override def toString: String = s"AccessGranted(${(first.labels.head)})"
+  case class AccessGranted(first: LabeledImage, second: LabeledImage, third: LabeledImage) {
+    override def toString: String = s"AccessGranted(${(first.labels.head, second.labels.head, third.labels.head)})"
   }
 
 }
